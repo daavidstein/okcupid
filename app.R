@@ -37,7 +37,7 @@ ui <-
                        ),
                        choiceValues = list(
                          "f", "m", "Any"
-                       ))
+                       ), selected = "Any")
       ,sliderInput("age", "Age:",
                    min = 18, max = 80, value = c(18,80))
       
@@ -127,9 +127,11 @@ server <- function(input, output) {
  
      output$pie <- renderPlotly({
        okcfilter <-okc %>%  select(sex, age, location, religion, height, ethnicity, orientation, drugs, smokes, status, height) %>%filter(if(input$sex  != "Any") sex == input$sex else TRUE) %>%  filter(between(age,input$age[1], input$age[2])) %>%  filter(between(height,input$height[1], input$height[2])) %>%  filter(if(input$religion  != "Any") grepl(input$religion, religion) else TRUE) %>%  filter(if(input$location  != "Any") location == input$location else TRUE) %>% filter(if(input$ethnicity  != "Any") grepl(input$ethnicity, ethnicity) else TRUE) %>% filter(if(input$orientation  != "Any") orientation == input$orientation else TRUE)
-       #rownum <- okcfilter %>% nrow
+      print(head(okcfilter))
+        #rownum <- okcfilter %>% nrow
      #  print(paste("nrow is," rownum))
-        #  validate( need(nrow(okcfilter) > 0), "Selection returned no results. Please widen your search criteria")
+       if(nrow(okcfilter) <1 ){return(NULL)} #showmodal inside
+          #validate( need(nrow(okcfilter) > 0), "Selection returned no results. Please widen your search criteria")
        #merge the various "seriousness" religion factors to make the pie chart less crowded
        okcfilter <-okcfilter %>% mutate(religion=case_when(grepl("judaism", religion) ~"judaism", grepl("islam", religion) ~"islam", grepl("christianity", religion) ~ "christianity", grepl("catholicism", religion) ~ "catholicism", grepl("agnosticism", religion) ~ "agnosticism", grepl("atheism", religion) ~"atheism", grepl("hinduism", religion) ~"hinduism", grepl("buddhism", religion) ~"buddhism",grepl("other", religion) | "" == religion ~"other/no response" ))
        
@@ -240,7 +242,8 @@ server <- function(input, output) {
      cat2 <-okc %>% select(input$cat2)
      df <- data.frame(cat1,cat2)
      names(df) <-c("cat1", "cat2")
-     print(head(df))
+    # print(head(df))
+     #print(table(df))
     # print(mycol)
     # print(okc[,input$cat1])
      #for some reason the above line doesn't capture the column contents
@@ -255,22 +258,26 @@ server <- function(input, output) {
      #df_test <-data.frame("cat1" = okc[,"sex"], "cat2" = okc[,"orientation"])
     # df <- okc %>% transmute(cat1 = !!input$cat1, cat2 = !!input$cat2)
     # print(df)
-     grouped_barr <- function(df){
+     
+     
+     #df = data.frame(gender = c("f", "f", "m", "m"), orientation = c("gay", "straight", "gay", "straight"), count = c(10, 20,30, 40))
+     #p <-plot_ly(df,x = ~gender, y =~count, color = ~orientation)
+          grouped_barr <- function(df){
        my_sum <- df %>% select(cat1, cat2) %>% group_by(cat1,cat2) %>% summarize(n=n())                                                                                    
-       my_sum
-       okc_wide <-spread(my_sum, cat2, n)
-       
-       
-       okcbar <- plot_ly(okc_wide, x = ~cat1, y =as.formula(paste("~",levels(df$cat2)[1])), type = 'bar', name = levels(df$cat2)[1])
-       
-       for (item in levels(df$cat2)[-1]){
-         okcbar <-  add_trace(okcbar,y =as.formula(paste("~",item)), name = item)
-         
-         
-         
-       }
-       
-       layout(okcbar,yaxis = list(title = 'Count'), barmode = 'group')
+       #print(head(my_sum))
+       #okc_wide <-spread(my_sum, cat2, n)
+     okcbar<- plot_ly(my_sum, type="bar", x = ~cat1, y =~n, color =~cat2)
+      # print(okc_wide)
+       # okcbar <- plot_ly(okc_wide, x = ~cat1, y =as.formula(paste("~",levels(df$cat2)[1])), type = 'bar', name = levels(df$cat2)[1])
+       # 
+       # for (item in levels(df$cat2)[-1]){
+       #   okcbar <-  okcbar %>%  add_trace(y =as.formula(paste("~",item)), name = item)
+       #   
+       #   
+       #   
+       # }
+       # 
+       # layout(okcbar,yaxis = list(title = 'Count'), barmode = 'group')
        return(okcbar)
      }#end grouped barr function
      
@@ -283,3 +290,10 @@ shinyApp(ui, server)
 #to fix the issue of too many of these "lines" with percents, let's actually fix the issue of the fact that there are too many tiny categories
 #if a category contains less than 2%, lump it into another category called "other". you can do this in the data preprocessing stage.
 ##todo: (only after everything else): allow "seriousness" options for religion, and allow multiple selections of ethnicity.
+
+
+#7 minute presentation
+
+
+#observeEvent 
+#whenever selectinput changes, update choices
